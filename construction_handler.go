@@ -576,7 +576,7 @@ func constructionParseHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Construct metadata
 	metadata := make(map[string]interface{})
-	metadata["block_to_live"] = string(tx_entries[0].GetBlockToLive())
+	metadata["block_to_live"] = strconv.FormatUint(tx_entries[0].GetBlockToLive(), 10)
 
 	// Construct the signers by finding the source address
 	var signers []AccountIdentifier
