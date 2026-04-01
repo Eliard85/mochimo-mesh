@@ -86,6 +86,8 @@ func main() {
 	r.Use(corsMiddleware)
 	r.Use(maxRequestSizeMiddleware) // Add the new middleware
 
+	r.HandleFunc("/", statusPageHandler).Methods("GET")
+	r.HandleFunc("/dashboard", statusPageHandler).Methods("GET")
 	r.HandleFunc("/network/options", networkOptionsHandler).Methods("POST", "OPTIONS")
 	r.HandleFunc("/network/list", networkListHandler).Methods("POST", "OPTIONS")
 
