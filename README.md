@@ -109,6 +109,11 @@ These endpoints are available if a ledger file path is specified.
 
 -   `/stats/richlist` - Get accounts with highest balances (requires ledger path)
 
+### Dashboard Notes
+
+-   The browser dashboard tracks blocks found locally on this node by watching the Mochimo working directory for `mblock.dat` and `cblock.dat`.
+-   Detected local finds are stored in `<tfile dir>/mesh-found-blocks.json` by default so the latest found blocks remain visible after restarting Mesh.
+
 (*) Requires online mode (-online flag set to true, as default)
 
 ## Configuration
@@ -118,8 +123,12 @@ These endpoints are available if a ledger file path is specified.
 | Flag               | Type     | Default                     | Description                                                                 |
 | :----------------- | :------- | :-------------------------- | :-------------------------------------------------------------------------- |
 | `-settings`         | string   | "interface_settings.json"   | Path to interface settings file                                             |
-| `-tfile`           | string   | "mochimo/bin/d/tfile.dat"   | Path to node's tfile.dat file                                             |
-| `-txclean`         | string   | "mochimo/bin/d/txclean.dat" | Path to node's txclean.dat file                                           |
+| `-datadir`         | string   | "/opt/mochimo/d"            | Path to node data directory                                               |
+| `-tfile`           | string   | ""                          | Path to node's tfile.dat file; defaults to `<datadir>/tfile.dat`          |
+| `-txclean`         | string   | ""                          | Path to node's txclean.dat file; defaults to `<datadir>/txclean.dat`      |
+| `-found-blocks-file` | string | ""                          | Path to saved history of local found blocks; defaults to `<tfile dir>/mesh-found-blocks.json` |
+| `-maddr`           | string   | ""                          | Local mining address used to filter dashboard blocks                       |
+| `-maddr-file`      | string   | ""                          | File containing local mining address used to filter dashboard blocks       |
 | `-fp`               | float    | 0.4                         | Lower percentile of fees from recent blocks                                 |
 | `-refresh_interval` | duration | 5s                          | Sync refresh interval in seconds                                            |
 | `-ledger`           | string   | ""                          | Path to ledger.dat file for statistics endpoints                           |
@@ -143,6 +152,10 @@ These endpoints are available if a ledger file path is specified.
 -   `MCM_CERT_FILE`: Path to SSL certificate
 -   `MCM_KEY_FILE`: Path to SSL private key
 -   `MCM_LEDGER_PATH`: Path to ledger.dat file for statistics endpoints
+-   `MCM_NODE_DATA_DIR`: Path to node data directory
+-   `MCM_FOUND_BLOCKS_FILE`: Path to saved history of local found blocks
+-   `MCM_MINING_ADDRESS`: Local mining address used to filter dashboard blocks
+-   `MCM_MINING_ADDRESS_FILE`: File containing local mining address used to filter dashboard blocks
 
 ## HTTPS Configuration
 
@@ -238,7 +251,7 @@ To enable the statistics endpoints, you need to provide a path to the Mochimo le
 
 1.  **Ledger File**:
 
-    The ledger.dat file contains the current state of all accounts on the Mochimo blockchain. If you're running a full Mochimo node, this file is typically located at `mochimo/bin/d/ledger.dat`.
+    The ledger.dat file contains the current state of all accounts on the Mochimo blockchain. If you're running a full Mochimo node, this file is typically located at `/opt/mochimo/d/ledger.dat`.
 
 2.  **Configuration**:
 
@@ -254,13 +267,13 @@ To enable the statistics endpoints, you need to provide a path to the Mochimo le
     To run the mesh with statistics endpoints enabled, use the `-ledger` flag to specify the path to your ledger.dat file:
 
     ```bash
-    ./mesh -ledger mochimo/bin/d/ledger.dat
+    ./mesh -ledger /opt/mochimo/d/ledger.dat
     ```
 
     Alternatively, you can use the `MCM_LEDGER_PATH` environment variable:
 
     ```bash
-    export MCM_LEDGER_PATH=mochimo/bin/d/ledger.dat
+    export MCM_LEDGER_PATH=/opt/mochimo/d/ledger.dat
     ./mesh
     ```
 
@@ -276,10 +289,10 @@ To enable the statistics endpoints, you need to provide a path to the Mochimo le
 
 -   Currency Symbol: MCM
 -   Decimals: 9 (1 MCM = 10^9 nanoMCM)
--   Block Sync: Requires `mochimo/bin/d/tfile.dat` access (if no other path is specified in the flags)
--   Mempool Endpoint: Requires access to `mochimo/bin/d/txclean.dat`
+-   Block Sync: Requires `/opt/mochimo/d/tfile.dat` access (or another file set via `-tfile`)
+-   Mempool Endpoint: Requires access to `/opt/mochimo/d/txclean.dat`
 -   Node Communication: Local node on specified IP/port
--   Statistics Endpoints: Requires access to `mochimo/bin/d/ledger.dat` (or path specified in flags)
+-   Statistics Endpoints: Requires access to `/opt/mochimo/d/ledger.dat` (or path specified in flags)
 
 ## Address Types
 
