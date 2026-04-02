@@ -22,14 +22,10 @@ type statusPageData struct {
 	LatestBlockHash       string
 	CurrentBlockUnixMilli uint64
 	CurrentBlockAge       string
-	GenesisBlockNum       uint64
-	GenesisBlockHash      string
 	SuggestedFee          uint64
 	HTTPPort              int
 	HTTPSPort             int
 	EnableHTTPS           bool
-	EnableIndexer         bool
-	LedgerPath            string
 	LastUpdated           string
 	RecentBlocks          []RecentBlockSummary
 }
@@ -217,9 +213,6 @@ var statusPageTemplate = template.Must(template.New("status-page").Parse(`<!DOCT
     .wide {
       grid-column: span 12;
     }
-    .half {
-      grid-column: span 6;
-    }
     .actions {
       display: flex;
       flex-wrap: wrap;
@@ -323,9 +316,6 @@ var statusPageTemplate = template.Must(template.New("status-page").Parse(`<!DOCT
       }
     }
     @media (max-width: 860px) {
-      .half {
-        grid-column: span 12;
-      }
       .metrics {
         grid-template-columns: 1fr;
       }
@@ -691,14 +681,10 @@ func buildStatusPageData(r *http.Request) statusPageData {
 		LatestBlockHash:       "0x" + hex.EncodeToString(Globals.LatestBlockHash[:]),
 		CurrentBlockUnixMilli: Globals.CurrentBlockUnixMilli,
 		CurrentBlockAge:       formatBlockAge(Globals.CurrentBlockUnixMilli),
-		GenesisBlockNum:       Globals.GenesisBlockNum,
-		GenesisBlockHash:      "0x" + hex.EncodeToString(Globals.GenesisBlockHash[:]),
 		SuggestedFee:          Globals.SuggestedFee,
 		HTTPPort:              Globals.HTTPPort,
 		HTTPSPort:             Globals.HTTPSPort,
 		EnableHTTPS:           Globals.EnableHTTPS,
-		EnableIndexer:         Globals.EnableIndexer,
-		LedgerPath:            Globals.LedgerPath,
 		LastUpdated:           formatDashboardTime(time.Now()),
 		RecentBlocks:          getRecentBlocksSnapshot(),
 	}
