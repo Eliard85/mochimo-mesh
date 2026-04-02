@@ -69,6 +69,8 @@ func main() {
 		return
 	}
 
+	initLocalFoundBlocks()
+
 	if Globals.OnlineMode {
 		mlog(1, "§bmain(): §2Running in online mode!")
 		Init()
@@ -88,6 +90,7 @@ func main() {
 
 	r.HandleFunc("/", statusPageHandler).Methods("GET")
 	r.HandleFunc("/dashboard", statusPageHandler).Methods("GET")
+	r.HandleFunc("/dashboard/data", dashboardDataHandler).Methods("GET")
 	r.HandleFunc("/network/options", networkOptionsHandler).Methods("POST", "OPTIONS")
 	r.HandleFunc("/network/list", networkListHandler).Methods("POST", "OPTIONS")
 
