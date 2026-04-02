@@ -1,5 +1,7 @@
 package main
 
+import "sync"
+
 /*
 MODIFY HERE THE CONSTANTS
 Remember to replace the versions when the Mochimo node is updated!
@@ -71,6 +73,10 @@ type ConstantType struct {
 type GlobalsType struct {
 	OnlineMode                 bool
 	LogLevel                   int
+	MiningAddress              string
+	MiningAddressFile          string
+	LocalMinerTag              [20]byte
+	HasLocalMinerTag           bool
 	CertFile                   string
 	KeyFile                    string
 	HTTPPort                   int
@@ -101,4 +107,9 @@ type GlobalsType struct {
 	EnableLedgerCache          bool
 	LedgerCacheRefreshInterval int
 	CertManager                *CertManager
+	FoundBlocksMu              sync.RWMutex
+	FoundBlocksHistory         []RecentBlockSummary
+	FoundBlockHashes           map[string]struct{}
+	RecentBlocksMu             sync.RWMutex
+	RecentBlocks               []RecentBlockSummary
 }
