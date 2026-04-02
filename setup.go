@@ -27,8 +27,6 @@ func SetupFlags() bool {
 	flag.StringVar(&TFILE_PATH, "tfile", "", "Path to node's tfile.dat file (defaults to <datadir>/tfile.dat)")
 	flag.StringVar(&TXCLEANFILE_PATH, "txclean", "", "Path to node's txclean.dat file (defaults to <datadir>/txclean.dat)")
 	flag.StringVar(&FOUND_BLOCKS_HISTORY_PATH, "found-blocks-file", "", "Path to persistent history of locally found blocks (defaults to <tfile dir>/mesh-found-blocks.json)")
-	flag.StringVar(&Globals.MiningAddress, "maddr", "", "Mining address for filtering local mined blocks (base58 or 0x hex tag)")
-	flag.StringVar(&Globals.MiningAddressFile, "maddr-file", "", "Path to mining address file for filtering local mined blocks")
 	flag.Float64Var(&SUGGESTED_FEE_PERC, "fp", 0.4, "The lower percentile of fees set in recent blocks")
 	flag.DurationVar(&REFRESH_SYNC_INTERVAL, "refresh_interval", 5*time.Second, "The interval in seconds to refresh the sync")
 	flag.StringVar(&Globals.LedgerPath, "ledger", "", "Path to the ledger.dat file for statistics")
@@ -62,12 +60,6 @@ func SetupFlags() bool {
 	}
 	if datadir := getEnv("MCM_NODE_DATA_DIR", ""); datadir != "" && NODE_DATA_DIR == "/opt/mochimo/d" {
 		NODE_DATA_DIR = datadir
-	}
-	if Globals.MiningAddress == "" {
-		Globals.MiningAddress = getEnv("MCM_MINING_ADDRESS", "")
-	}
-	if Globals.MiningAddressFile == "" {
-		Globals.MiningAddressFile = getEnv("MCM_MINING_ADDRESS_FILE", "")
 	}
 	if FOUND_BLOCKS_HISTORY_PATH == "" {
 		FOUND_BLOCKS_HISTORY_PATH = getEnv("MCM_FOUND_BLOCKS_FILE", "")
