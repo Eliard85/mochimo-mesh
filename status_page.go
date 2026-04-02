@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -30,7 +31,10 @@ type statusPageData struct {
 	EnableIndexer         bool
 	LedgerPath            string
 	LastUpdated           string
+	RecentBlocks          []RecentBlockSummary
 }
+
+var dashboardTimeZone = time.FixedZone("GMT+3", 3*60*60)
 
 var statusPageTemplate = template.Must(template.New("status-page").Parse(`<!DOCTYPE html>
 <html lang="en">
@@ -177,11 +181,21 @@ var statusPageTemplate = template.Must(template.New("status-page").Parse(`<!DOCT
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 14px;
     }
+    .metrics-four {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    .metrics-live {
+      grid-template-columns: max-content max-content minmax(0, 1fr) max-content;
+    }
     .metric {
       padding: 14px;
       border-radius: 16px;
       background: rgba(255, 255, 255, 0.52);
       border: 1px solid rgba(31, 42, 42, 0.08);
+    }
+    .metric-compact .label,
+    .metric-compact .value {
+      white-space: nowrap;
     }
     .label {
       display: block;
@@ -243,6 +257,71 @@ var statusPageTemplate = template.Must(template.New("status-page").Parse(`<!DOCT
       color: var(--muted);
       font-size: 0.92rem;
     }
+    .hidden {
+      display: none;
+    }
+    .table-shell {
+      overflow-x: hidden;
+      border-radius: 18px;
+      border: 1px solid rgba(31, 42, 42, 0.08);
+      background: rgba(255, 255, 255, 0.48);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+    .recent-blocks-table col.col-height {
+      width: 9ch;
+    }
+    .recent-blocks-table col.col-solved {
+      width: 190px;
+    }
+    .recent-blocks-table col.col-mined {
+      width: 32%;
+    }
+    .recent-blocks-table col.col-hash {
+      width: auto;
+    }
+    th,
+    td {
+      padding: 13px 14px;
+      text-align: left;
+      vertical-align: top;
+      border-bottom: 1px solid rgba(31, 42, 42, 0.08);
+    }
+    th {
+      color: var(--muted);
+      font-size: 0.76rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+    .primary {
+      font-weight: 600;
+    }
+    .subtle {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 0.85rem;
+      line-height: 1.45;
+    }
+    .wrap-cell {
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: break-all;
+    }
+    .nowrap-cell {
+      white-space: nowrap;
+    }
+    @media (max-width: 1080px) {
+      .metrics-four,
+      .metrics-live {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
     @media (max-width: 860px) {
       .half {
         grid-column: span 12;
@@ -272,14 +351,14 @@ var statusPageTemplate = template.Must(template.New("status-page").Parse(`<!DOCT
     </section>
 
     <section class="grid">
-      <article class="card half">
+      <article class="card wide">
         <h2>Live chain data</h2>
-        <div class="metrics">
-          <div class="metric">
+        <div class="metrics metrics-four metrics-live">
+          <div class="metric metric-compact">
             <span class="label">Current Block</span>
             <div id="latest-block" class="value">{{.LatestBlockNum}}</div>
           </div>
-          <div class="metric">
+          <div class="metric metric-compact">
             <span class="label">Block Age</span>
             <div id="block-age" class="value">{{.CurrentBlockAge}}</div>
           </div>
@@ -287,14 +366,14 @@ var statusPageTemplate = template.Must(template.New("status-page").Parse(`<!DOCT
             <span class="label">Current Block Hash</span>
             <div id="latest-hash" class="value mono">{{.LatestBlockHash}}</div>
           </div>
-          <div class="metric">
+          <div class="metric metric-compact">
             <span class="label">Suggested Fee</span>
             <div class="value">{{.SuggestedFee}}</div>
           </div>
         </div>
       </article>
 
-      <article class="card half">
+      <article class="card wide">
         <h2>Mesh state</h2>
         <div class="metrics">
           <div class="metric">
@@ -305,15 +384,46 @@ var statusPageTemplate = template.Must(template.New("status-page").Parse(`<!DOCT
             <span class="label">Last Refresh</span>
             <div id="last-updated" class="value">{{.LastUpdated}}</div>
           </div>
-          <div class="metric">
-            <span class="label">Genesis Block</span>
-            <div class="value">{{.GenesisBlockNum}}</div>
-          </div>
-          <div class="metric">
-            <span class="label">Genesis Hash</span>
-            <div class="value mono">{{.GenesisBlockHash}}</div>
-          </div>
         </div>
+      </article>
+
+      <article class="card wide">
+        <h2>Latest 50 blocks on this node</h2>
+        <div class="table-shell">
+          <table class="recent-blocks-table">
+            <colgroup>
+              <col class="col-height">
+              <col class="col-solved">
+              <col class="col-mined">
+              <col class="col-hash">
+            </colgroup>
+            <thead>
+              <tr>
+                <th>Height</th>
+                <th>Solved</th>
+                <th>Mined To</th>
+                <th>Hash</th>
+              </tr>
+            </thead>
+            <tbody id="recent-blocks-body">
+              {{range .RecentBlocks}}
+              <tr>
+                <td class="primary nowrap-cell">{{.Number}}</td>
+                <td>
+                  <div class="primary">{{.TimestampLabel}}</div>
+                  <div class="subtle">{{.Age}}</div>
+                </td>
+                <td class="wrap-cell">
+                  <div class="primary mono">{{if .MinerAddressBase58}}{{.MinerAddressBase58}}{{else}}{{.MinerAddress}}{{end}}</div>
+                  {{if .MinerAddressBase58}}<div class="subtle mono">{{.MinerAddress}}</div>{{end}}
+                </td>
+                <td class="mono wrap-cell">{{.Hash}}</td>
+              </tr>
+              {{end}}
+            </tbody>
+          </table>
+        </div>
+        <div id="recent-blocks-empty" class="footer-note {{if .RecentBlocks}}hidden{{end}}">No recent block data is available yet.</div>
       </article>
 
       <article class="card wide">
@@ -327,14 +437,6 @@ var statusPageTemplate = template.Must(template.New("status-page").Parse(`<!DOCT
             <span class="label">Versions</span>
             <div class="value">Node {{.NodeVersion}} · Mesh {{.MiddlewareVersion}}</div>
           </div>
-          <div class="metric">
-            <span class="label">Indexer</span>
-            <div class="value">{{if .EnableIndexer}}enabled{{else}}disabled{{end}}</div>
-          </div>
-          <div class="metric">
-            <span class="label">Ledger</span>
-            <div class="value">{{if .LedgerPath}}{{.LedgerPath}}{{else}}not configured{{end}}</div>
-          </div>
         </div>
       </article>
 
@@ -346,8 +448,8 @@ var statusPageTemplate = template.Must(template.New("status-page").Parse(`<!DOCT
           <button id="current-block-btn" class="button" type="button">Show current block</button>
           <a class="button" href="/dashboard" target="_self">Reload dashboard</a>
         </div>
-        <pre id="status-json">Loading...</pre>
-        <div class="footer-note">The dashboard uses a POST request to <code>/network/status</code> in the background. If Mesh is in offline mode, live API refresh is disabled.</div>
+        <pre id="status-json">Use the buttons above to inspect JSON payloads.</pre>
+        <div class="footer-note">The dashboard refreshes itself through <code>GET /dashboard/data</code>. Buttons below still query the Mesh API endpoints directly.</div>
       </article>
     </section>
   </div>
@@ -367,9 +469,13 @@ var statusPageTemplate = template.Must(template.New("status-page").Parse(`<!DOCT
       return Math.floor(diffSeconds / 86400) + " d ago";
     }
 
-    function updateAge() {
-      document.getElementById("block-age").textContent = formatAge(state.currentBlockTimestamp);
-    }
+	    function updateAge() {
+	      document.getElementById("block-age").textContent = formatAge(state.currentBlockTimestamp);
+	      document.querySelectorAll("[data-block-age]").forEach((node) => {
+	        const ts = Number(node.getAttribute("data-ts") || "0");
+	        node.textContent = formatAge(ts);
+	      });
+	    }
 
     function setBadge(id, ok, goodText, badText) {
       const node = document.getElementById(id);
@@ -392,34 +498,106 @@ var statusPageTemplate = template.Must(template.New("status-page").Parse(`<!DOCT
       return text;
     }
 
-    async function refreshStatus() {
-      if (!state.onlineMode) {
-        document.getElementById("status-json").textContent = "Mesh runs in offline mode. Live node status is unavailable.";
-        return;
-      }
-
-      const text = await postJSON("/network/status", {
-        network_identifier: {
-          blockchain: "{{.Blockchain}}",
-          network: "{{.Network}}"
-        }
+    async function fetchJSON(path, mirrorToStatus = false) {
+      const response = await fetch(path, {
+        method: "GET",
+        headers: { "Accept": "application/json" }
       });
-      const data = JSON.parse(text);
-      state.currentBlockTimestamp = data.current_block_timestamp || 0;
+      const text = await response.text();
+      if (mirrorToStatus) {
+        document.getElementById("status-json").textContent = text;
+      }
+      if (!response.ok) {
+        throw new Error("HTTP " + response.status);
+      }
+      return JSON.parse(text);
+    }
 
-      document.getElementById("latest-block").textContent = data.current_block_identifier?.index ?? "n/a";
-      document.getElementById("latest-hash").textContent = data.current_block_identifier?.hash ?? "n/a";
-      document.getElementById("sync-stage").textContent = data.sync_status?.stage ?? "unknown";
-      document.getElementById("last-updated").textContent = new Date().toLocaleString();
+    function escapeHTML(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;",
+        "'": "&#39;"
+      }[char]));
+    }
 
-      setBadge("pill-sync", Boolean(data.sync_status?.synced), "Sync: yes", "Sync: no");
-      setBadge("pill-https", Boolean(data.https_status?.enabled), "HTTPS: on", "HTTPS: off");
+	function renderRecentBlocks(blocks) {
+	      const body = document.getElementById("recent-blocks-body");
+	      const empty = document.getElementById("recent-blocks-empty");
+
+	      if (!Array.isArray(blocks) || blocks.length === 0) {
+        body.innerHTML = "";
+        empty.classList.remove("hidden");
+        return;
+	      }
+
+	      empty.classList.add("hidden");
+	      const rows = blocks.map((block) => {
+	        const number = block.Number ?? block.number;
+	        const hash = block.Hash ?? block.hash;
+	        const timestampLabel = block.TimestampLabel ?? block.timestamp_label;
+	        const age = block.Age ?? block.age;
+	        const timestampUnixMilli = block.TimestampUnixMilli ?? block.timestamp_unix_milli ?? 0;
+	        const minerAddress = block.MinerAddress ?? block.miner_address;
+	        const minerAddressBase58 = block.MinerAddressBase58 ?? block.miner_address_base58;
+
+	        if (!hash || /^0x0+$/i.test(hash)) {
+	          return "";
+	        }
+
+	        const minedTo = minerAddressBase58 || minerAddress || "n/a";
+	        const minedToHex = minerAddressBase58
+	          ? '<div class="subtle mono">' + escapeHTML(minerAddress || "") + '</div>'
+	          : "";
+
+	        const ageLabel = timestampUnixMilli ? formatAge(timestampUnixMilli) : (age || "unknown");
+
+	        return ''
+	          + '<tr>'
+	          +   '<td class="primary nowrap-cell">' + escapeHTML(number ?? "n/a") + '</td>'
+	          +   '<td>'
+	          +     '<div class="primary">' + escapeHTML(timestampLabel || "unknown") + '</div>'
+	          +     '<div class="subtle" data-block-age="1" data-ts="' + escapeHTML(timestampUnixMilli) + '">' + escapeHTML(ageLabel) + '</div>'
+	          +   '</td>'
+	          +   '<td class="wrap-cell">'
+	          +     '<div class="primary mono">' + escapeHTML(minedTo) + '</div>'
+	          +     minedToHex
+	          +   '</td>'
+	          +   '<td class="mono wrap-cell">' + escapeHTML(hash) + '</td>'
+	          + '</tr>';
+	      }).filter(Boolean);
+
+	      if (rows.length === 0) {
+	        body.innerHTML = "";
+	        empty.classList.remove("hidden");
+	        return;
+	      }
+
+	      body.innerHTML = rows.join("");
+	    }
+
+    async function refreshStatus(mirrorToStatus = false) {
+      const data = await fetchJSON("/dashboard/data", mirrorToStatus);
+      state.currentBlockTimestamp = data.CurrentBlockUnixMilli || 0;
+      state.onlineMode = Boolean(data.OnlineMode);
+
+      document.getElementById("latest-block").textContent = data.LatestBlockNum ?? "n/a";
+      document.getElementById("latest-hash").textContent = data.LatestBlockHash ?? "n/a";
+      document.getElementById("sync-stage").textContent = data.SyncStage ?? "unknown";
+      document.getElementById("last-updated").textContent = data.LastUpdated ?? "unknown";
+
+      setBadge("pill-mode", Boolean(data.OnlineMode), "Mode: online", "Mode: offline");
+      setBadge("pill-sync", Boolean(data.Synced), "Sync: yes", "Sync: no");
+      setBadge("pill-https", Boolean(data.EnableHTTPS), "HTTPS: on", "HTTPS: off");
+      renderRecentBlocks(data.RecentBlocks || []);
 
       updateAge();
     }
 
     document.getElementById("refresh-btn").addEventListener("click", () => {
-      refreshStatus().catch((err) => {
+      refreshStatus(true).catch((err) => {
         document.getElementById("status-json").textContent = "Refresh failed: " + err.message;
       });
     });
@@ -451,12 +629,26 @@ var statusPageTemplate = template.Must(template.New("status-page").Parse(`<!DOCT
     });
 
     updateAge();
-    refreshStatus().catch((err) => {
+    renderRecentBlocks({{if .RecentBlocks}}[
+      {{- range $index, $block := .RecentBlocks }}
+      {{- if $index }},{{ end }}
+      {
+        "Number": {{ $block.Number }},
+        "TimestampUnixMilli": {{ $block.TimestampUnixMilli }},
+        "TimestampLabel": {{ printf "%q" $block.TimestampLabel }},
+        "Age": {{ printf "%q" $block.Age }},
+        "Hash": {{ printf "%q" $block.Hash }},
+        "MinerAddress": {{ printf "%q" $block.MinerAddress }},
+        "MinerAddressBase58": {{ printf "%q" $block.MinerAddressBase58 }}
+      }
+      {{- end }}
+    ]{{else}}[]{{end}});
+    refreshStatus(false).catch((err) => {
       document.getElementById("status-json").textContent = "Refresh failed: " + err.message;
     });
     setInterval(updateAge, 1000);
     setInterval(() => {
-      refreshStatus().catch((err) => {
+      refreshStatus(false).catch((err) => {
         document.getElementById("status-json").textContent = "Refresh failed: " + err.message;
       });
     }, 5000);
@@ -466,8 +658,27 @@ var statusPageTemplate = template.Must(template.New("status-page").Parse(`<!DOCT
 `))
 
 func statusPageHandler(w http.ResponseWriter, r *http.Request) {
+	data := buildStatusPageData(r)
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if err := statusPageTemplate.Execute(w, data); err != nil {
+		mlog(3, "§bstatusPageHandler(): §4Error rendering status page: §c%s", err)
+		http.Error(w, "failed to render status page", http.StatusInternalServerError)
+	}
+}
+
+func dashboardDataHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(buildStatusPageData(r)); err != nil {
+		mlog(3, "§bdashboardDataHandler(): §4Error encoding dashboard data: §c%s", err)
+		http.Error(w, "failed to encode dashboard data", http.StatusInternalServerError)
+	}
+}
+
+func buildStatusPageData(r *http.Request) statusPageData {
 	apiBase := fmt.Sprintf("%s://%s", requestScheme(r), r.Host)
-	data := statusPageData{
+
+	return statusPageData{
 		APIBase:               apiBase,
 		Blockchain:            Constants.NetworkIdentifier.Blockchain,
 		Network:               Constants.NetworkIdentifier.Network,
@@ -488,13 +699,8 @@ func statusPageHandler(w http.ResponseWriter, r *http.Request) {
 		EnableHTTPS:           Globals.EnableHTTPS,
 		EnableIndexer:         Globals.EnableIndexer,
 		LedgerPath:            Globals.LedgerPath,
-		LastUpdated:           time.Now().Format("2006-01-02 15:04:05"),
-	}
-
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := statusPageTemplate.Execute(w, data); err != nil {
-		mlog(3, "§bstatusPageHandler(): §4Error rendering status page: §c%s", err)
-		http.Error(w, "failed to render status page", http.StatusInternalServerError)
+		LastUpdated:           formatDashboardTime(time.Now()),
+		RecentBlocks:          getRecentBlocksSnapshot(),
 	}
 }
 
@@ -524,4 +730,8 @@ func formatBlockAge(ts uint64) string {
 		return fmt.Sprintf("%d h ago", int(diff.Hours()))
 	}
 	return fmt.Sprintf("%d d ago", int(diff.Hours()/24))
+}
+
+func formatDashboardTime(t time.Time) string {
+	return t.In(dashboardTimeZone).Format("2006-01-02 15:04:05 MST")
 }
