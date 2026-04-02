@@ -73,10 +73,6 @@ type ConstantType struct {
 type GlobalsType struct {
 	OnlineMode                 bool
 	LogLevel                   int
-	MiningAddress              string
-	MiningAddressFile          string
-	LocalMinerTag              [20]byte
-	HasLocalMinerTag           bool
 	CertFile                   string
 	KeyFile                    string
 	HTTPPort                   int
