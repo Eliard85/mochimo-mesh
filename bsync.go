@@ -14,7 +14,8 @@ import (
 
 var REFRESH_SYNC_INTERVAL time.Duration = 10
 var SUGGESTED_FEE_PERC float64 = 0.25 // the percentile of the minimum fee
-var TFILE_PATH = "mochimo/bin/d/tfile.dat"
+var NODE_DATA_DIR = "/opt/mochimo/d"
+var TFILE_PATH = ""
 var SETTINGS_PATH string = "interface_settings.json"
 
 var INDEXER_DB *indexer.Database
@@ -169,6 +170,7 @@ func RefreshSync() error {
 	Globals.LatestBlockNum = latest_block
 	Globals.LatestBlockHash = latest_trailer.Bhash
 	Globals.CurrentBlockUnixMilli = uint64(binary.LittleEndian.Uint32(latest_trailer.Stime[:])) * 1000
+	refreshRecentBlocksCache()
 
 	// get the last 100 block hashes and add them to the block map
 	mlog(5, "§bRefreshSync(): §7Reading latest §e100§7 blocks map from §8%s", TFILE_PATH)
