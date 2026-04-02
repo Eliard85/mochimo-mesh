@@ -127,8 +127,6 @@ These endpoints are available if a ledger file path is specified.
 | `-tfile`           | string   | ""                          | Path to node's tfile.dat file; defaults to `<datadir>/tfile.dat`          |
 | `-txclean`         | string   | ""                          | Path to node's txclean.dat file; defaults to `<datadir>/txclean.dat`      |
 | `-found-blocks-file` | string | ""                          | Path to saved history of local found blocks; defaults to `<tfile dir>/mesh-found-blocks.json` |
-| `-maddr`           | string   | ""                          | Local mining address used to filter dashboard blocks                       |
-| `-maddr-file`      | string   | ""                          | File containing local mining address used to filter dashboard blocks       |
 | `-fp`               | float    | 0.4                         | Lower percentile of fees from recent blocks                                 |
 | `-refresh_interval` | duration | 5s                          | Sync refresh interval in seconds                                            |
 | `-ledger`           | string   | ""                          | Path to ledger.dat file for statistics endpoints                           |
@@ -154,8 +152,6 @@ These endpoints are available if a ledger file path is specified.
 -   `MCM_LEDGER_PATH`: Path to ledger.dat file for statistics endpoints
 -   `MCM_NODE_DATA_DIR`: Path to node data directory
 -   `MCM_FOUND_BLOCKS_FILE`: Path to saved history of local found blocks
--   `MCM_MINING_ADDRESS`: Local mining address used to filter dashboard blocks
--   `MCM_MINING_ADDRESS_FILE`: File containing local mining address used to filter dashboard blocks
 
 ## HTTPS Configuration
 
