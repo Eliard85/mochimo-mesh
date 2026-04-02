@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/NickP005/go_mcminterface"
@@ -22,8 +23,12 @@ func SetupFlags() bool {
 	solo_node := ""
 
 	flag.StringVar(&SETTINGS_PATH, "settings", "interface_settings.json", "Path to the interface settings file")
-	flag.StringVar(&TFILE_PATH, "tfile", "mochimo/bin/d/tfile.dat", "Path to node's tfile.dat file")
-	flag.StringVar(&TXCLEANFILE_PATH, "txclean", "mochimo/bin/d/txclean.dat", "Path to node's txclean.dat file")
+	flag.StringVar(&NODE_DATA_DIR, "datadir", "/opt/mochimo/d", "Path to node data directory")
+	flag.StringVar(&TFILE_PATH, "tfile", "", "Path to node's tfile.dat file (defaults to <datadir>/tfile.dat)")
+	flag.StringVar(&TXCLEANFILE_PATH, "txclean", "", "Path to node's txclean.dat file (defaults to <datadir>/txclean.dat)")
+	flag.StringVar(&FOUND_BLOCKS_HISTORY_PATH, "found-blocks-file", "", "Path to persistent history of locally found blocks (defaults to <tfile dir>/mesh-found-blocks.json)")
+	flag.StringVar(&Globals.MiningAddress, "maddr", "", "Mining address for filtering local mined blocks (base58 or 0x hex tag)")
+	flag.StringVar(&Globals.MiningAddressFile, "maddr-file", "", "Path to mining address file for filtering local mined blocks")
 	flag.Float64Var(&SUGGESTED_FEE_PERC, "fp", 0.4, "The lower percentile of fees set in recent blocks")
 	flag.DurationVar(&REFRESH_SYNC_INTERVAL, "refresh_interval", 5*time.Second, "The interval in seconds to refresh the sync")
 	flag.StringVar(&Globals.LedgerPath, "ledger", "", "Path to the ledger.dat file for statistics")
@@ -54,6 +59,37 @@ func SetupFlags() bool {
 	}
 	if Globals.LedgerPath == "" {
 		Globals.LedgerPath = getEnv("MCM_LEDGER_PATH", "")
+	}
+	if datadir := getEnv("MCM_NODE_DATA_DIR", ""); datadir != "" && NODE_DATA_DIR == "/opt/mochimo/d" {
+		NODE_DATA_DIR = datadir
+	}
+	if Globals.MiningAddress == "" {
+		Globals.MiningAddress = getEnv("MCM_MINING_ADDRESS", "")
+	}
+	if Globals.MiningAddressFile == "" {
+		Globals.MiningAddressFile = getEnv("MCM_MINING_ADDRESS_FILE", "")
+	}
+	if FOUND_BLOCKS_HISTORY_PATH == "" {
+		FOUND_BLOCKS_HISTORY_PATH = getEnv("MCM_FOUND_BLOCKS_FILE", "")
+	}
+	if TFILE_PATH == "" {
+		TFILE_PATH = filepath.Join(NODE_DATA_DIR, "tfile.dat")
+	}
+	if TXCLEANFILE_PATH == "" {
+		TXCLEANFILE_PATH = filepath.Join(NODE_DATA_DIR, "txclean.dat")
+	}
+	if !filepath.IsAbs(TFILE_PATH) {
+		if absPath, err := filepath.Abs(TFILE_PATH); err == nil {
+			TFILE_PATH = absPath
+		}
+	}
+	if FOUND_BLOCKS_HISTORY_PATH == "" {
+		FOUND_BLOCKS_HISTORY_PATH = filepath.Join(filepath.Dir(TFILE_PATH), "mesh-found-blocks.json")
+	}
+	if !filepath.IsAbs(FOUND_BLOCKS_HISTORY_PATH) {
+		if absPath, err := filepath.Abs(FOUND_BLOCKS_HISTORY_PATH); err == nil {
+			FOUND_BLOCKS_HISTORY_PATH = absPath
+		}
 	}
 
 	// Enable HTTPS only if both cert and key are provided
