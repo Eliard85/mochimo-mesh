@@ -14,6 +14,7 @@ The official Mochimo API, following the Rosetta standard, for interacting with t
 
     Start exploring the Mochimo Mesh API immediately using our public endpoints. See [Query Examples](.github/QUERY_EXAMPLES.md) for example queries.
 
+    -   `http://89.44.85.139:8080/dashboard`
     -   `https://api.mochimo.org`
     -   `http://35.208.202.76:8080`
 
