@@ -26,25 +26,12 @@ The official Mochimo API, following the Rosetta standard, for interacting with t
     1.  Clone and build:
 
         ```bash
-        git clone https://github.com/NickP005/mochimo-mesh.git
+        git clone https://github.com/Eliard85/mochimo-mesh.git
         cd mochimo-mesh
         go build -o mesh .
         ```
 
-    2.  Ensure Mochimo node is running and synced under the `mochimo/bin/` subfolder:
-
-        ```bash
-        git clone https://github.com/mochimodev/mochimo mochimo/
-        cd mochimo/
-        make mochimo
-        cd bin/
-        ./gomochi -d # Consider running the node in a separate screen or service
-        cd ..
-        ```
-
-        For more accurate and complex configuration, follow the guide at [github.com/mochimodev/mochimo](https://github.com/mochimodev/mochimo). These processes should ideally be run as a service.
-
-    3.  Run:
+    2.  Run:
 
         ```bash
         ./mesh -solo 0.0.0.0         # Connect to local node
@@ -54,9 +41,6 @@ The official Mochimo API, following the Rosetta standard, for interacting with t
 
         For more configuration options, see the [Command Line Flags](#command-line-flags) section.
 
-3.  **Docker Setup**:
-
-    Docker setup is currently a work in progress. Feel free to contribute :)
 
 ## API Endpoints
 
