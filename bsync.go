@@ -170,6 +170,7 @@ func RefreshSync() error {
 	Globals.LatestBlockNum = latest_block
 	Globals.LatestBlockHash = latest_trailer.Bhash
 	Globals.CurrentBlockUnixMilli = uint64(binary.LittleEndian.Uint32(latest_trailer.Stime[:])) * 1000
+	Globals.CurrentDifficulty = binary.LittleEndian.Uint32(latest_trailer.Difficulty[:])
 	refreshRecentBlocksCache()
 
 	// get the last 100 block hashes and add them to the block map
