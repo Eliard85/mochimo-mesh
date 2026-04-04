@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -24,6 +25,7 @@ type statusPageData struct {
 	CurrentBlockAge       string
 	CurrentDifficulty     uint32
 	SuggestedFee          uint64
+	SuggestedFeeDisplay   string
 	HTTPPort              int
 	HTTPSPort             int
 	EnableHTTPS           bool
@@ -362,8 +364,8 @@ var statusPageTemplate = template.Must(template.New("status-page").Parse(`<!DOCT
             <div id="latest-hash" class="value mono">{{.LatestBlockHash}}</div>
           </div>
           <div class="metric metric-compact">
-            <span class="label">Suggested Fee</span>
-            <div class="value">{{.SuggestedFee}}</div>
+            <span class="label">Fee</span>
+            <div id="suggested-fee" class="value">{{.SuggestedFeeDisplay}}</div>
           </div>
         </div>
       </article>
@@ -581,6 +583,7 @@ var statusPageTemplate = template.Must(template.New("status-page").Parse(`<!DOCT
       document.getElementById("latest-block").textContent = data.LatestBlockNum ?? "n/a";
       document.getElementById("latest-hash").textContent = data.LatestBlockHash ?? "n/a";
       document.getElementById("current-difficulty").textContent = data.CurrentDifficulty ?? "n/a";
+      document.getElementById("suggested-fee").textContent = data.SuggestedFeeDisplay ?? "n/a";
       document.getElementById("sync-stage").textContent = data.SyncStage ?? "unknown";
       document.getElementById("last-updated").textContent = data.LastUpdated ?? "unknown";
 
@@ -689,6 +692,7 @@ func buildStatusPageData(r *http.Request) statusPageData {
 		CurrentBlockAge:       formatBlockAge(Globals.CurrentBlockUnixMilli),
 		CurrentDifficulty:     Globals.CurrentDifficulty,
 		SuggestedFee:          Globals.SuggestedFee,
+		SuggestedFeeDisplay:   formatNanoMCM(Globals.SuggestedFee),
 		HTTPPort:              Globals.HTTPPort,
 		HTTPSPort:             Globals.HTTPSPort,
 		EnableHTTPS:           Globals.EnableHTTPS,
@@ -727,4 +731,15 @@ func formatBlockAge(ts uint64) string {
 
 func formatDashboardTime(t time.Time) string {
 	return t.In(dashboardTimeZone).Format("2006-01-02 15:04:05 MST")
+}
+
+func formatNanoMCM(value uint64) string {
+	whole := value / 1_000_000_000
+	fraction := value % 1_000_000_000
+	if fraction == 0 {
+		return fmt.Sprintf("%d.0", whole)
+	}
+
+	fractionText := strings.TrimRight(fmt.Sprintf("%09d", fraction), "0")
+	return fmt.Sprintf("%d.%s", whole, fractionText)
 }
