@@ -22,6 +22,7 @@ type statusPageData struct {
 	LatestBlockHash       string
 	CurrentBlockUnixMilli uint64
 	CurrentBlockAge       string
+	CurrentDifficulty     uint32
 	SuggestedFee          uint64
 	HTTPPort              int
 	HTTPSPort             int
@@ -178,10 +179,10 @@ var statusPageTemplate = template.Must(template.New("status-page").Parse(`<!DOCT
       gap: 14px;
     }
     .metrics-four {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
     }
     .metrics-live {
-      grid-template-columns: max-content max-content minmax(0, 1fr) max-content;
+      grid-template-columns: max-content max-content max-content minmax(0, 1fr) max-content;
     }
     .metric {
       padding: 14px;
@@ -351,6 +352,10 @@ var statusPageTemplate = template.Must(template.New("status-page").Parse(`<!DOCT
           <div class="metric metric-compact">
             <span class="label">Block Age</span>
             <div id="block-age" class="value">{{.CurrentBlockAge}}</div>
+          </div>
+          <div class="metric metric-compact">
+            <span class="label">Difficulty</span>
+            <div id="current-difficulty" class="value">{{.CurrentDifficulty}}</div>
           </div>
           <div class="metric">
             <span class="label">Current Block Hash</span>
@@ -575,6 +580,7 @@ var statusPageTemplate = template.Must(template.New("status-page").Parse(`<!DOCT
 
       document.getElementById("latest-block").textContent = data.LatestBlockNum ?? "n/a";
       document.getElementById("latest-hash").textContent = data.LatestBlockHash ?? "n/a";
+      document.getElementById("current-difficulty").textContent = data.CurrentDifficulty ?? "n/a";
       document.getElementById("sync-stage").textContent = data.SyncStage ?? "unknown";
       document.getElementById("last-updated").textContent = data.LastUpdated ?? "unknown";
 
@@ -681,6 +687,7 @@ func buildStatusPageData(r *http.Request) statusPageData {
 		LatestBlockHash:       "0x" + hex.EncodeToString(Globals.LatestBlockHash[:]),
 		CurrentBlockUnixMilli: Globals.CurrentBlockUnixMilli,
 		CurrentBlockAge:       formatBlockAge(Globals.CurrentBlockUnixMilli),
+		CurrentDifficulty:     Globals.CurrentDifficulty,
 		SuggestedFee:          Globals.SuggestedFee,
 		HTTPPort:              Globals.HTTPPort,
 		HTTPSPort:             Globals.HTTPSPort,
